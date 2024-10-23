@@ -14,4 +14,9 @@ public class WelcomeControlller {
     public String sayWelcome(){
         return "Welcome to spring security tutorial";
     }
+
+    @GetMapping("/invalidSession")
+    public String invalidSession(){
+        return "Session Timed out. Please login again";
+    }
 }

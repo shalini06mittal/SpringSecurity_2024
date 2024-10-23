@@ -1,5 +1,7 @@
 package com.security.demo.SpringSecurityDemoLatest.config;
 
+import com.security.demo.SpringSecurityDemoLatest.exceptionhandler.CustomBasicAuthenticationEntryPoint;
+import com.security.demo.SpringSecurityDemoLatest.exceptionhandler.exceptionhandler.CustomAccessDeniedHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -71,16 +73,20 @@ public class ProjectSecurityConfig {
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         System.out.println("filter chain for security");
 //        http.authorizeHttpRequests((requests) -> requests.anyRequest().authenticated());
-
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.sessionManagement(smc -> smc.invalidSessionUrl("/invalidSession"))
+        .requiresChannel(rcc -> rcc.anyRequest().requiresInsecure())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((requests) ->
             requests
                     .requestMatchers("/myAccount", "/myCards", "/myLoans","/myBalance").authenticated()
-                    .requestMatchers("/contact","/notices","/welcome","/register").permitAll()
+                    .requestMatchers("/contact","/notices","/welcome","/register","/invalidSession").permitAll()
         );
 //        http.formLogin(AbstractHttpConfigurer::disable);
         http.formLogin(withDefaults());
-        http.httpBasic(withDefaults());
+
+//        http.httpBasic(withDefaults());
+        http.httpBasic((c) -> c.authenticationEntryPoint(new CustomBasicAuthenticationEntryPoint()));
+        http.exceptionHandling((c) -> c.accessDeniedHandler(new CustomAccessDeniedHandler()));
         return http.build();
     }
 }
