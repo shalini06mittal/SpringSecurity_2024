@@ -20,6 +20,7 @@ export class XhrInterceptor implements HttpInterceptor {
     }
 
     let xsrf = sessionStorage.getItem('XSRF-TOKEN');
+    console.log(xsrf);
     if(xsrf){
       httpHeaders = httpHeaders.append('X-XSRF-TOKEN', xsrf);
     }
