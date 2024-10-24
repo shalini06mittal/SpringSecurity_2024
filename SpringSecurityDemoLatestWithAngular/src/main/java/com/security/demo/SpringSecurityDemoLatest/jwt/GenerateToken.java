@@ -36,7 +36,7 @@ public class GenerateToken {
                        .collect(Collectors.joining(",")))
                .subject("JWT Token for authenticatio")
                .issuedAt(new Date())
-               .expiration(new Date((new Date()).getTime() + 300000))// 8 hours
+               .expiration(new Date((new Date()).getTime() + 300000))
                .signWith(secretKey).compact();
 
         return jwt;
