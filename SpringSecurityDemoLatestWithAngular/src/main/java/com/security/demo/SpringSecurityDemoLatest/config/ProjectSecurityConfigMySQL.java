@@ -2,8 +2,9 @@ package com.security.demo.SpringSecurityDemoLatest.config;
 
 import com.security.demo.SpringSecurityDemoLatest.exceptionhandling.CustomAccessDeniedHandler;
 import com.security.demo.SpringSecurityDemoLatest.exceptionhandling.CustomBasicAuthenticationEntryPoint;
-import com.security.demo.SpringSecurityDemoLatest.filter.CsrfCookieFilter;
+import com.security.demo.SpringSecurityDemoLatest.filter.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -30,6 +31,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import javax.sql.DataSource;
 
 import java.util.Collections;
+import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -37,14 +39,17 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Profile("!prod")
 public class ProjectSecurityConfigMySQL {
 
+    @Autowired
+    private JwtTokenGenerateFilter jwtTokenGenerateFilter;
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
 
         CsrfTokenRequestAttributeHandler csrfTokenRequestAttributeHandler = new CsrfTokenRequestAttributeHandler();
 
-        http.securityContext(sc -> sc.requireExplicitSave(false));
+       // http.securityContext(sc -> sc.requireExplicitSave(false));
 
-        http.sessionManagement(smc-> smc.sessionCreationPolicy(SessionCreationPolicy.ALWAYS));
+        http.sessionManagement(smc-> smc.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         http.csrf(csrfConfig ->
                 csrfConfig
@@ -52,9 +57,15 @@ public class ProjectSecurityConfigMySQL {
                         .ignoringRequestMatchers("/contact","/register")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 
-                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+//                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
+//                .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
+//                .addFilterAt(new AuthoritiesLoggingAtFilter(), BasicAuthenticationFilter.class);
 
-       http.cors(corscf-> corscf.configurationSource(new CorsConfigurationSource() {
+                .addFilterAfter(jwtTokenGenerateFilter, BasicAuthenticationFilter.class)
+                .addFilterBefore(new JwtTokenValidationFilter(), BasicAuthenticationFilter.class);
+
+        http.cors(corscf-> corscf.configurationSource(new CorsConfigurationSource() {
                    @Override
                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
                        CorsConfiguration corsConfiguration = new CorsConfiguration();
@@ -63,6 +74,7 @@ public class ProjectSecurityConfigMySQL {
                        corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
                        corsConfiguration.setAllowCredentials(true);
                        corsConfiguration.setMaxAge(3600L);
+                       corsConfiguration.setExposedHeaders(List.of("Authorization"));
                        return corsConfiguration;
                    }
                }));
@@ -72,11 +84,18 @@ public class ProjectSecurityConfigMySQL {
                http.requiresChannel(rcc-> rcc.anyRequest().requiresInsecure()) // HTTP
                 //.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((requests) -> requests
-                        .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT")
-                        .requestMatchers("/myBalance").hasAnyAuthority("VIEWBALANCE", "VIEWACCOUNT")
-                        .requestMatchers("/myLoans").hasAuthority("VIEWLOANS")
-                        .requestMatchers("/myCards").hasAuthority("VIEWCARDS")
+//                        .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT")
+//                        .requestMatchers("/myBalance").hasAnyAuthority("VIEWBALANCE", "VIEWACCOUNT")
+//                        .requestMatchers("/myLoans").hasAuthority("VIEWLOANS")
+//                        .requestMatchers("/myCards").hasAuthority("VIEWCARDS")
+//                        .requestMatchers("/user").authenticated()
+
+                        .requestMatchers("/myAccount").hasRole("USER")
+                        .requestMatchers("/myBalance").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers("/myLoans").hasRole("USER")
+                        .requestMatchers("/myCards").hasRole("USER")
                         .requestMatchers("/user").authenticated()
+
                         //.requestMatchers("/myAccount", "/myBalance", "/myLoans", "/myCards","/user").authenticated()
                 .requestMatchers("/notices", "/contact", "/error","/register","/invalidSession").permitAll());
 
